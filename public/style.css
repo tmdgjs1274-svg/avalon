@@ -1,0 +1,218 @@
+* { box-sizing: border-box; }
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #0f1115;
+  color: #f0f0f0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans KR", sans-serif;
+}
+body {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 48px;
+  min-height: 100%;
+}
+h1 { font-size: 1.4rem; margin: 8px 0 4px; text-align: center; }
+h2 { font-size: 1.1rem; margin: 4px 0; color: #b9c4ff; }
+p.sub { color: #9aa0ab; text-align: center; margin: 4px 0 20px; font-size: 0.9rem; }
+
+.card {
+  background: #1a1d24;
+  border: 1px solid #2a2e38;
+  border-radius: 14px;
+  padding: 20px;
+  width: 100%;
+  max-width: 420px;
+  margin-bottom: 16px;
+}
+
+.btn {
+  display: inline-block;
+  width: 100%;
+  padding: 14px 18px;
+  border-radius: 10px;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 8px;
+  text-align: center;
+}
+.btn-primary { background: #4a6cf7; color: white; }
+.btn-secondary { background: #2a2e38; color: #f0f0f0; }
+.btn-danger { background: #c0392b; color: white; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+input[type="text"] {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #2a2e38;
+  background: #0f1115;
+  color: #f0f0f0;
+  font-size: 1rem;
+  margin-top: 6px;
+}
+
+label.toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #24272f;
+  font-size: 0.95rem;
+}
+label.toggle:last-child { border-bottom: none; }
+
+.room-code {
+  font-size: 2rem;
+  letter-spacing: 0.3em;
+  font-weight: 700;
+  text-align: center;
+  color: #7c98ff;
+  margin: 8px 0 16px;
+}
+
+.player-list { list-style: none; padding: 0; margin: 0; }
+.player-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px solid #24272f;
+  font-size: 0.95rem;
+}
+.player-list li:last-child { border-bottom: none; }
+.player-list .kick { color: #c0392b; cursor: pointer; font-size: 0.85rem; }
+.player-left { color: #5c6270; }
+.player-role { font-size: 0.85rem; font-weight: 700; }
+.player-role.good { color: #7cf7a0; }
+.player-role.evil { color: #ff6b6b; }
+.player-role.masked { color: #4a4f5c; font-weight: 400; }
+
+.reveal-box {
+  margin-top: 24px;
+  padding: 28px 20px;
+  border-radius: 14px;
+  background: #12151b;
+  border: 2px dashed #3a3f4c;
+  text-align: center;
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.reveal-box.hidden-state { color: #565a66; }
+.reveal-box.shown-state { border-color: #4a6cf7; background: #14182a; }
+
+.hold-btn {
+  width: 100%;
+  padding: 20px;
+  border-radius: 12px;
+  border: none;
+  background: #4a6cf7;
+  color: white;
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin-top: 16px;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: manipulation;
+}
+.hold-btn:active { background: #3a56d4; }
+
+.names-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 10px 0;
+}
+.names {
+  display: inline-block;
+  font-size: 1.05rem;
+  font-weight: 700;
+  padding: 6px 14px;
+  border-radius: 8px;
+  background: rgba(255, 209, 102, 0.15);
+  border: 1px solid rgba(255, 209, 102, 0.5);
+  color: #ffd166;
+  white-space: nowrap;
+}
+.role-name {
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+.role-name.good { color: #7cf7a0; }
+.role-name.evil { color: #ff6b6b; }
+
+.save-modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(5, 6, 9, 0.94);
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px 16px;
+  text-align: center;
+}
+.save-modal-guide {
+  color: #fff;
+  font-size: 1rem;
+  line-height: 1.5;
+  margin-bottom: 16px;
+  max-width: 420px;
+}
+.save-modal-img {
+  max-width: 90vw;
+  max-height: 60vh;
+  border-radius: 12px;
+  border: 2px solid #3a3f4c;
+}
+.save-modal-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 20px;
+}
+
+.badge-done {
+  display: inline-block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: rgba(124, 247, 160, 0.15);
+  border: 1px solid rgba(124, 247, 160, 0.5);
+  color: #7cf7a0;
+  white-space: nowrap;
+}
+.note { font-size: 0.85rem; color: #9aa0ab; margin-top: 8px; }
+
+.role-img {
+  width: 160px;
+  max-width: 60vw;
+  border-radius: 10px;
+  border: 2px solid #3a3f4c;
+  margin-bottom: 10px;
+  display: block;
+}
+
+.btn-outline {
+  background: transparent;
+  border: 1px solid #4a6cf7;
+  color: #7c98ff;
+}
+
+.step-indicator {
+  font-size: 0.85rem;
+  color: #7c98ff;
+  margin-bottom: 4px;
+}
+
+.error-msg { color: #ff6b6b; font-size: 0.9rem; margin-top: 8px; min-height: 1.2em; }
+
+a.link-plain { color: #7c98ff; text-decoration: none; }

@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>참가자 - 아발론</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>참가자 화면</h1>
+  <p class="sub">이 화면은 본인만 보세요. 다른 사람에게 보여주지 마세요.</p>
+
+  <div class="card" id="joinCard">
+    <label>이름
+      <input type="text" id="nameInput" placeholder="예: 승헌" maxlength="20" />
+    </label>
+    <label style="margin-top:10px; display:block;">방 코드
+      <input type="text" id="codeInput" placeholder="예: A1B2" maxlength="4" style="text-transform:uppercase;" />
+    </label>
+    <button class="btn btn-primary" id="joinBtn">입장하기</button>
+    <div class="error-msg" id="joinErr"></div>
+  </div>
+
+  <div class="card" id="waitCard" style="display:none;">
+    <p>진행자가 역할을 배정할 때까지 기다려 주세요.</p>
+    <p class="note">화면을 옆으로 눕히거나 손으로 가려서 다른 사람이 못 보게 해주세요.</p>
+  </div>
+
+  <div class="card" id="roleCard" style="display:none;">
+    <h2>내 역할 &amp; 알아야 할 정보</h2>
+    <div style="display:flex; gap:10px;">
+      <button class="hold-btn" id="roleHoldBtn" style="flex:2; margin-top:0;">역할 조회</button>
+      <button class="btn btn-outline" id="saveImgBtn" style="flex:1; margin-top:0;">📷 저장</button>
+    </div>
+    <div class="reveal-box hidden-state" id="roleBox" style="margin-top:16px;">내 역할</div>
+  </div>
+
+  <div id="saveModal" class="save-modal" style="display:none;">
+    <p class="save-modal-guide">아래 이미지를 <b>길게 눌러서 "사진에 저장"</b>을 선택하면 사진첩(갤러리)에 저장돼요.</p>
+    <img id="saveModalImg" class="save-modal-img" alt="역할 카드 이미지" />
+    <div class="save-modal-actions">
+      <button class="btn btn-secondary" id="closeModalBtn" style="margin-top:0;">닫기</button>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let code = null;
+    let myBundle = null; // { role, image, related: {title, names, note} | null }
+
+    document.getElementById('joinBtn').onclick = () => {
+      const name = document.getElementById('nameInput').value;
+      const c = document.getElementById('codeInput').value;
+      socket.emit('join_room', { code: c, name }, (res) => {
+        if (!res.ok) {
+          document.getElementById('joinErr').textContent = res.error || '입장 실패';
+          return;
+        }
+        code = res.code;
+        document.getElementById('joinCard').style.display = 'none';
+        document.getElementById('waitCard').style.display = 'block';
+      });
+    };
+
+    socket.on('kicked', () => {
+      alert('진행자가 당신을 방에서 내보냈습니다.');
+      location.reload();
+    });
+
+    socket.on('room_reset', () => {
+      // 소켓 연결은 유지한 채(방에서 나가지 않고) 화면만 대기 상태로 되돌림
+      myBundle = null;
+      document.getElementById('roleCard').style.display = 'none';
+      document.getElementById('roleBox').className = 'reveal-box hidden-state';
+      document.getElementById('roleBox').innerHTML = '내 역할';
+      document.getElementById('roleHoldBtn').textContent = '역할 조회';
+      if (roleToggle) roleToggle.reset();
+      document.getElementById('waitCard').style.display = 'block';
+    });
+
+    function bindToggle(btnId, onShow, onHide) {
+      const btn = document.getElementById(btnId);
+      let shown = false;
+      btn.addEventListener('click', () => {
+        shown = !shown;
+        if (shown) onShow(); else onHide();
+      });
+      return {
+        reset: () => { shown = false; },
+      };
+    }
+
+    function renderBundleHtml(bundle) {
+      let html = '';
+      if (bundle.image) {
+        html += `<img class="role-img" src="img/roles/${bundle.image}" alt="${bundle.role}" />`;
+      }
+      const sideClass = bundle.side === '악' ? 'evil' : 'good';
+      html += `<div class="role-name ${sideClass}">[${bundle.side}] ${bundle.role}</div>`;
+      if (bundle.related) {
+        html += `<div style="margin-top:14px;">${bundle.related.title}</div>`;
+        if (bundle.related.names && bundle.related.names.length > 0) {
+          html += '<div class="names-row">' +
+            bundle.related.names.map((n) => `<span class="names">${n}</span>`).join('') +
+            '</div>';
+        }
+        if (bundle.related.note) {
+          html += `<div class="note">${bundle.related.note}</div>`;
+        }
+      }
+      return html;
+    }
+
+    // 저장 버튼을 눌렀을 때 이미지 로딩을 기다리지 않도록, 역할을 받는 즉시 미리 불러와 둔다.
+    // (버튼 클릭 시점에 이미지가 아직 로딩 중이면, 다운로드가 비동기로 늦게 실행되면서
+    //  일부 폰 브라우저에서 "탭했는데 저장이 안 되는" 현상이 생길 수 있음)
+    let preloadedRoleImg = null;
+    function preloadRoleImage(bundle) {
+      preloadedRoleImg = null;
+      if (!bundle || !bundle.image) return;
+      const img = new Image();
+      img.onload = () => { preloadedRoleImg = img; };
+      img.src = `img/roles/${bundle.image}`;
+    }
+
+    socket.on('your_role_bundle', (bundle) => {
+      myBundle = bundle;
+      preloadRoleImage(bundle);
+      document.getElementById('waitCard').style.display = 'none';
+      document.getElementById('roleCard').style.display = 'block';
+      document.getElementById('roleBox').className = 'reveal-box hidden-state';
+      document.getElementById('roleBox').innerHTML = '내 역할';
+      document.getElementById('roleHoldBtn').textContent = '역할 조회';
+      if (roleToggle) roleToggle.reset();
+
+      if (navigator.vibrate) navigator.vibrate([40, 60, 40]);
+    });
+
+    const roleToggle = bindToggle('roleHoldBtn',
+      () => {
+        if (!myBundle) return;
+        const box = document.getElementById('roleBox');
+        box.className = 'reveal-box shown-state';
+        box.innerHTML = renderBundleHtml(myBundle);
+        document.getElementById('roleHoldBtn').textContent = '가리기';
+      },
+      () => {
+        const box = document.getElementById('roleBox');
+        box.className = 'reveal-box hidden-state';
+        box.innerHTML = '내 역할';
+        document.getElementById('roleHoldBtn').textContent = '역할 조회';
+      }
+    );
+
+    // ---- 이미지로 저장 (캔버스에 역할 카드 + 정보 + 워터마크를 그려서 다운로드) ----
+    function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
+      const words = text.split(' ');
+      let line = '';
+      for (let n = 0; n < words.length; n++) {
+        const testLine = line + words[n] + ' ';
+        if (ctx.measureText(testLine).width > maxWidth && n > 0) {
+          ctx.fillText(line, x, y);
+          line = words[n] + ' ';
+          y += lineHeight;
+        } else {
+          line = testLine;
+        }
+      }
+      ctx.fillText(line, x, y);
+      return y + lineHeight;
+    }
+
+    function roundRectPath(ctx, x, y, w, h, r) {
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.arcTo(x + w, y, x + w, y + h, r);
+      ctx.arcTo(x + w, y + h, x, y + h, r);
+      ctx.arcTo(x, y + h, x, y, r);
+      ctx.arcTo(x, y, x + w, y, r);
+      ctx.closePath();
+    }
+
+    // 이름들을 뱃지 모양으로, 가로로 나열하다 너비를 넘으면 다음 줄로 줄바꿈(가운데 정렬)
+    function drawNameBadges(ctx, names, centerX, startY, maxWidth) {
+      const chipPaddingX = 22;
+      const chipHeight = 52;
+      const gap = 14;
+      const lineGap = 16;
+      ctx.font = 'bold 32px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+
+      const chips = names.map((n) => ({ text: n, w: ctx.measureText(n).width + chipPaddingX * 2 }));
+
+      const lines = [];
+      let currentLine = [];
+      let currentWidth = 0;
+      chips.forEach((chip) => {
+        const addWidth = chip.w + (currentLine.length > 0 ? gap : 0);
+        if (currentWidth + addWidth > maxWidth && currentLine.length > 0) {
+          lines.push(currentLine);
+          currentLine = [chip];
+          currentWidth = chip.w;
+        } else {
+          currentLine.push(chip);
+          currentWidth += addWidth;
+        }
+      });
+      if (currentLine.length) lines.push(currentLine);
+
+      let y = startY;
+      lines.forEach((line) => {
+        const lineWidth = line.reduce((sum, c) => sum + c.w, 0) + gap * (line.length - 1);
+        let x = centerX - lineWidth / 2;
+        line.forEach((chip) => {
+          ctx.fillStyle = 'rgba(255,209,102,0.15)';
+          roundRectPath(ctx, x, y, chip.w, chipHeight, 12);
+          ctx.fill();
+          ctx.strokeStyle = 'rgba(255,209,102,0.6)';
+          ctx.lineWidth = 2;
+          roundRectPath(ctx, x, y, chip.w, chipHeight, 12);
+          ctx.stroke();
+          ctx.fillStyle = '#ffd166';
+          ctx.fillText(chip.text, x + chipPaddingX, y + chipHeight / 2);
+          x += chip.w + gap;
+        });
+        y += chipHeight + lineGap;
+      });
+
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+      return y;
+    }
+
+    // 이미지 우상단에 작은 뱃지로 원정 번호를 찍는다 (카드 하단에 여백을 따로 안 남겨도 됨)
+    function drawCapBadge(ctx, capId, canvasW) {
+      ctx.font = '20px monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      const paddingX = 12;
+      const textW = ctx.measureText(capId).width;
+      const badgeW = textW + paddingX * 2;
+      const badgeH = 32;
+      const x = canvasW - 14 - badgeW;
+      const y = 14;
+      ctx.fillStyle = 'rgba(0,0,0,0.55)';
+      roundRectPath(ctx, x, y, badgeW, badgeH, badgeH / 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+      ctx.lineWidth = 1;
+      roundRectPath(ctx, x, y, badgeW, badgeH, badgeH / 2);
+      ctx.stroke();
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fillText(capId, x + paddingX, y + badgeH / 2);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'alphabetic';
+    }
+
+    // 카드 내용을 그리고, 실제로 사용한 세로 길이를 반환한다.
+    // (역할마다 "알아야 할 정보"의 유무/길이가 다르므로, 캔버스 높이를 고정하지 않고
+    //  내용에 맞춰 정하기 위해 이 함수를 두 번 호출한다: 1차는 높이 측정용 스크래치
+    //  캔버스에, 2차는 실제로 쓸 정확한 높이의 캔버스에 그린다)
+    function renderCard(ctx, W, bundle, capId, img) {
+      let y = 0;
+
+      if (img) {
+        const imgDrawH = Math.round(W * (img.height / img.width));
+        ctx.drawImage(img, 0, 0, W, imgDrawH);
+        drawCapBadge(ctx, capId, W);
+        y = imgDrawH;
+      } else {
+        drawCapBadge(ctx, capId, W);
+        y = 40;
+      }
+
+      y += 46;
+      ctx.textAlign = 'center';
+      ctx.fillStyle = bundle.side === '악' ? '#ff6b6b' : '#7cf7a0';
+      ctx.font = 'bold 44px sans-serif';
+      ctx.fillText(`[${bundle.side}] ${bundle.role}`, W / 2, y);
+
+      if (bundle.related) {
+        ctx.fillStyle = '#ffd166';
+        ctx.font = '600 28px sans-serif';
+        y += 44;
+        ctx.fillText(bundle.related.title, W / 2, y);
+
+        if (bundle.related.names && bundle.related.names.length > 0) {
+          y += 28;
+          y = drawNameBadges(ctx, bundle.related.names, W / 2, y, W - 100);
+        }
+
+        if (bundle.related.note) {
+          ctx.font = '24px sans-serif';
+          ctx.fillStyle = '#9aa0ab';
+          y += 26;
+          y = wrapText(ctx, bundle.related.note, W / 2, y, W - 100, 30);
+        }
+      }
+
+      return y + 36;
+    }
+
+    function downloadRoleCard(bundle, capId) {
+      const W = 720;
+
+      const withImage = (img) => {
+        // 1차: 실제 필요한 높이를 재기 위한 측정용 캔버스 (화면에 보이지 않고 버려짐)
+        const scratch = document.createElement('canvas');
+        scratch.width = W;
+        scratch.height = 3000;
+        const totalH = renderCard(scratch.getContext('2d'), W, bundle, capId, img);
+
+        // 2차: 위에서 잰 높이로 실제 캔버스를 만들어 다시 그림 (빈 여백이 남지 않음)
+        const canvas = document.createElement('canvas');
+        canvas.width = W;
+        canvas.height = totalH;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#0f1115';
+        ctx.fillRect(0, 0, W, totalH);
+        renderCard(ctx, W, bundle, capId, img);
+
+        // toDataURL은 동기 함수라 지연 없이 바로 화면에 이미지를 띄울 수 있다.
+        // (예전에는 canvas.toBlob → navigator.share 순서로 비동기 처리를 했는데,
+        //  그 사이에 "탭한 동작"이 아닌 것으로 취급되어 일부 모바일 브라우저에서
+        //  공유/다운로드가 조용히 실패하는 경우가 있었음)
+        const dataUrl = canvas.toDataURL('image/png');
+        showSaveModal(dataUrl);
+      };
+
+      if (bundle.image) {
+        // 미리 불러와 둔 이미지가 있으면(대부분의 경우) 기다림 없이 바로 그려서,
+        // 저장 버튼을 눌렀을 때 지연 없이 한 번에 처리되도록 한다.
+        if (preloadedRoleImg && preloadedRoleImg.src.endsWith(`img/roles/${bundle.image}`) && preloadedRoleImg.complete) {
+          withImage(preloadedRoleImg);
+        } else {
+          const img = new Image();
+          img.onload = () => withImage(img);
+          img.onerror = () => withImage(null);
+          img.src = `img/roles/${bundle.image}`;
+        }
+      } else {
+        withImage(null);
+      }
+    }
+
+    // ---- 저장 모달: 이미지를 화면에 띄우고, "길게 눌러서 저장"으로 안내한다 ----
+    // (사진첩 저장은 브라우저/OS 권한에 기대는 방식(공유 시트, 자동 다운로드)이 기기마다
+    //  들쭉날쭉해서, 어떤 기기에서도 항상 되는 "이미지 길게 눌러 저장" 한 가지로 통일한다)
+    function showSaveModal(dataUrl) {
+      document.getElementById('saveModalImg').src = dataUrl;
+      document.getElementById('saveModal').style.display = 'flex';
+    }
+
+    document.getElementById('closeModalBtn').onclick = () => {
+      document.getElementById('saveModal').style.display = 'none';
+    };
+
+    document.getElementById('saveImgBtn').onclick = () => {
+      if (!myBundle) return;
+      // 같은 배정(방)에서 저장하면 모두 같은 번호가 찍히도록, 역할 배정 때 받은 번호를 그대로 사용한다.
+      const capId = myBundle.captureId || 'unknown';
+      downloadRoleCard(myBundle, capId);
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>진행자 - 아발론</title>
+<link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <h1>진행자 화면</h1>
+  <p class="sub">이 화면은 진행자만 보고, 참가자들에게 보여주지 마세요.</p>
+
+  <div class="card" id="createCard">
+    <button class="btn btn-primary" id="createBtn">방 만들기</button>
+    <div class="error-msg" id="createErr"></div>
+  </div>
+
+  <div class="card" id="roomCard" style="display:none;">
+    <h2>참가자 접속 코드</h2>
+    <div class="room-code" id="roomCode">----</div>
+
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2 style="margin:0;">인원 (<span id="playerCount">0</span>명)</h2>
+      <button class="btn btn-outline" id="toggleRolesBtn" style="display:none; width:auto; margin-top:0; padding:6px 14px; font-size:0.85rem; white-space:nowrap;">역할 보기</button>
+    </div>
+    <ul class="player-list" id="playerList"></ul>
+  </div>
+
+  <div class="card" id="optionsCard" style="display:none;">
+    <div style="display:flex; justify-content:space-between; align-items:center;">
+      <h2 style="margin:0;">역할 구성</h2>
+      <span class="badge-done" id="doneBadge" style="display:none;">배정 완료</span>
+    </div>
+    <p class="note" id="splitInfo" style="margin-bottom:8px;"></p>
+    <label class="toggle"><span>멀린</span><input type="checkbox" id="opt_merlin" checked /></label>
+    <label class="toggle"><span>퍼시벌 (멀린 필요)</span><input type="checkbox" id="opt_percival" /></label>
+    <label class="toggle"><span>모드레드 (멀린에게 안 보임)</span><input type="checkbox" id="opt_mordred" /></label>
+    <label class="toggle"><span>모르가나 (퍼시벌에게 멀린처럼 보임)</span><input type="checkbox" id="opt_morgana" /></label>
+    <label class="toggle"><span>오베론 (팀원과 서로 모름)</span><input type="checkbox" id="opt_oberon" /></label>
+    <label class="toggle"><span>암살자</span><input type="checkbox" id="opt_assassin" checked /></label>
+    <button class="btn btn-primary" id="assignBtn">역할 배정 시작</button>
+    <button class="btn btn-danger" id="resetBtn" style="display:none;">다시 배정 (초기화)</button>
+    <div class="error-msg" id="assignErr"></div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script>
+    const socket = io();
+    let code = null;
+
+    document.getElementById('createBtn').onclick = () => {
+      socket.emit('create_room', {}, (res) => {
+        if (!res.ok) {
+          document.getElementById('createErr').textContent = res.error || '방 생성 실패';
+          return;
+        }
+        code = res.code;
+        document.getElementById('createCard').style.display = 'none';
+        document.getElementById('roomCard').style.display = 'block';
+        document.getElementById('optionsCard').style.display = 'block';
+        document.getElementById('roomCode').textContent = code;
+      });
+    };
+
+    function currentOptions() {
+      return {
+        merlin: document.getElementById('opt_merlin').checked,
+        percival: document.getElementById('opt_percival').checked,
+        mordred: document.getElementById('opt_mordred').checked,
+        morgana: document.getElementById('opt_morgana').checked,
+        oberon: document.getElementById('opt_oberon').checked,
+        assassin: document.getElementById('opt_assassin').checked,
+      };
+    }
+
+    ['opt_merlin','opt_percival','opt_mordred','opt_morgana','opt_oberon','opt_assassin'].forEach((id) => {
+      document.getElementById(id).addEventListener('change', () => {
+        if (!code) return;
+        socket.emit('set_options', { code, options: currentOptions() }, () => {});
+      });
+    });
+
+    document.getElementById('assignBtn').onclick = () => {
+      document.getElementById('assignErr').textContent = '';
+      socket.emit('assign_roles', { code }, (res) => {
+        if (!res.ok) {
+          document.getElementById('assignErr').textContent = res.error || '배정 실패';
+          return;
+        }
+      });
+    };
+
+    document.getElementById('resetBtn').onclick = () => {
+      socket.emit('reset_room', { code }, () => {});
+    };
+
+    // 배정된 역할은 기본적으로 가려두고, "역할 보기" 버튼을 눌러야만 보이는 토글로 동작한다.
+    // (진행자가 참가자들 앞에서 화면을 켜놓아도 실수로 노출되지 않도록)
+    let rolesVisible = false;
+    let wasStarted = false;
+
+    document.getElementById('toggleRolesBtn').onclick = () => {
+      rolesVisible = !rolesVisible;
+      if (lastState) renderPlayerList(lastState);
+    };
+
+    let lastState = null;
+
+    function renderPlayerList(state) {
+      const toggleBtn = document.getElementById('toggleRolesBtn');
+      toggleBtn.style.display = state.started ? 'inline-block' : 'none';
+      toggleBtn.textContent = rolesVisible ? '역할 숨기기' : '역할 보기';
+
+      const list = document.getElementById('playerList');
+      list.innerHTML = '';
+      state.players.forEach((p) => {
+        const li = document.createElement('li');
+
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = p.left ? `${p.name} (나감)` : p.name;
+        if (p.left) nameSpan.className = 'player-left';
+        li.appendChild(nameSpan);
+
+        if (state.started) {
+          if (p.role) {
+            const roleSpan = document.createElement('span');
+            if (rolesVisible) {
+              roleSpan.textContent = `[${p.side}] ${p.role}`;
+              roleSpan.className = p.side === '악' ? 'player-role evil' : 'player-role good';
+            } else {
+              roleSpan.textContent = '가려짐';
+              roleSpan.className = 'player-role masked';
+            }
+            li.appendChild(roleSpan);
+          }
+        } else {
+          const kick = document.createElement('span');
+          kick.textContent = '내보내기';
+          kick.className = 'kick';
+          kick.onclick = () => socket.emit('kick_player', { code, playerId: p.id }, () => {});
+          li.appendChild(kick);
+        }
+
+        list.appendChild(li);
+      });
+    }
+
+    socket.on('room_state', (state) => {
+      lastState = state;
+      if (state.started && !wasStarted) {
+        rolesVisible = false; // 새로 배정될 때마다 기본은 가림 상태로 시작
+      }
+      wasStarted = state.started;
+
+      document.getElementById('playerCount').textContent = state.players.length;
+      renderPlayerList(state);
+
+      if (state.teamSplit) {
+        const testNote = state.teamSplit.test ? ' (⚠️ 1~4명은 정식 밸런스가 아닌 테스트용 구성입니다)' : '';
+        document.getElementById('splitInfo').textContent =
+          `현재 ${state.players.length}명 → 선 ${state.teamSplit.good}명 / 악 ${state.teamSplit.evil}명${testNote}`;
+      } else {
+        document.getElementById('splitInfo').textContent = '1~10명이 모이면 인원 구성이 표시됩니다.';
+      }
+
+      if (state.started) {
+        document.getElementById('optionsCard').querySelectorAll('input').forEach((el) => el.disabled = true);
+        document.getElementById('assignBtn').style.display = 'none';
+        document.getElementById('resetBtn').style.display = 'block';
+        document.getElementById('doneBadge').style.display = 'inline-block';
+      } else {
+        document.getElementById('optionsCard').querySelectorAll('input').forEach((el) => el.disabled = false);
+        document.getElementById('assignBtn').style.display = 'block';
+        document.getElementById('resetBtn').style.display = 'none';
+        document.getElementById('doneBadge').style.display = 'none';
+        document.getElementById('assignErr').textContent = '';
+      }
+    });
+
+    socket.on('host_left', () => {});
+  </script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "avalon-role-bundle",
+  "version": "1.0.0",
+  "description": "아발론 역할 배정과 동시에, 각 역할이 알아야 하는 사람 정보까지 한 번에 각자 폰으로 비공개 전송하는 로컬 웹앱",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
