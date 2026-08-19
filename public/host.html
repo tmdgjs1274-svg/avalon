@@ -15,36 +15,42 @@
     <div class="error-msg" id="createErr"></div>
   </div>
 
-  <div class="card" id="roomCard" style="display:none;">
-    <h2>참가자 접속 코드</h2>
-    <div class="room-code-row">
-      <div class="room-code" id="roomCode">----</div>
-      <div class="qr-box" id="roomQr"></div>
-    </div>
-    <p class="note" style="text-align:center; margin-top:-8px;">참가자가 QR을 찍으면 코드가 입력된 채로 접속 화면이 열려요. (QR을 탭하면 크게 볼 수 있어요)</p>
+  <div class="layout-row">
+    <div class="col-left">
+      <div class="card" id="roomCard" style="display:none;">
+        <h2>참가자 접속 코드</h2>
+        <div class="room-code-row">
+          <div class="room-code" id="roomCode">----</div>
+          <div class="qr-box" id="roomQr"></div>
+        </div>
+        <p class="note" style="text-align:center;">참가자가 QR을 찍으면 코드가 입력된 채로 접속 화면이 열려요. (QR을 탭하면 크게 볼 수 있어요)</p>
 
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h2 style="margin:0;">인원 (<span id="playerCount">0</span>명)</h2>
-      <button class="btn btn-outline" id="toggleRolesBtn" style="display:none; width:auto; margin-top:0; padding:6px 14px; font-size:0.85rem; white-space:nowrap;">역할 보기</button>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2 style="margin:0;">인원 (<span id="playerCount">0</span>명)</h2>
+          <button class="btn btn-outline" id="toggleRolesBtn" style="display:none; width:auto; margin-top:0; padding:6px 14px; font-size:0.85rem; white-space:nowrap;">역할 보기</button>
+        </div>
+        <ul class="player-list" id="playerList"></ul>
+      </div>
     </div>
-    <ul class="player-list" id="playerList"></ul>
-  </div>
 
-  <div class="card" id="optionsCard" style="display:none;">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-      <h2 style="margin:0;">역할 구성</h2>
-      <span class="badge-done" id="doneBadge" style="display:none;">배정 완료</span>
+    <div class="col-right">
+      <div class="card" id="optionsCard" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+          <h2 style="margin:0;">역할 구성</h2>
+          <span class="badge-done" id="doneBadge" style="display:none;">배정 완료</span>
+        </div>
+        <p class="note" id="splitInfo" style="margin-bottom:8px;"></p>
+        <label class="toggle"><span>멀린</span><input type="checkbox" id="opt_merlin" checked /></label>
+        <label class="toggle"><span>퍼시벌 (멀린 필요)</span><input type="checkbox" id="opt_percival" /></label>
+        <label class="toggle"><span>모드레드 (멀린에게 안 보임)</span><input type="checkbox" id="opt_mordred" /></label>
+        <label class="toggle"><span>모르가나 (퍼시벌에게 멀린처럼 보임)</span><input type="checkbox" id="opt_morgana" /></label>
+        <label class="toggle"><span>오베론 (팀원과 서로 모름)</span><input type="checkbox" id="opt_oberon" /></label>
+        <label class="toggle"><span>암살자</span><input type="checkbox" id="opt_assassin" checked /></label>
+        <button class="btn btn-primary" id="assignBtn">역할 배정 시작</button>
+        <button class="btn btn-danger" id="resetBtn" style="display:none;">다시 배정 (초기화)</button>
+        <div class="error-msg" id="assignErr"></div>
+      </div>
     </div>
-    <p class="note" id="splitInfo" style="margin-bottom:8px;"></p>
-    <label class="toggle"><span>멀린</span><input type="checkbox" id="opt_merlin" checked /></label>
-    <label class="toggle"><span>퍼시벌 (멀린 필요)</span><input type="checkbox" id="opt_percival" /></label>
-    <label class="toggle"><span>모드레드 (멀린에게 안 보임)</span><input type="checkbox" id="opt_mordred" /></label>
-    <label class="toggle"><span>모르가나 (퍼시벌에게 멀린처럼 보임)</span><input type="checkbox" id="opt_morgana" /></label>
-    <label class="toggle"><span>오베론 (팀원과 서로 모름)</span><input type="checkbox" id="opt_oberon" /></label>
-    <label class="toggle"><span>암살자</span><input type="checkbox" id="opt_assassin" checked /></label>
-    <button class="btn btn-primary" id="assignBtn">역할 배정 시작</button>
-    <button class="btn btn-danger" id="resetBtn" style="display:none;">다시 배정 (초기화)</button>
-    <div class="error-msg" id="assignErr"></div>
   </div>
 
   <div id="qrModal" class="qr-modal" style="display:none;">

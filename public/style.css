@@ -28,6 +28,34 @@ p.sub { color: #9aa0ab; text-align: center; margin: 4px 0 20px; font-size: 0.9re
   margin-bottom: 16px;
 }
 
+/* 진행자 화면: 좁은 화면(세로)에서는 위/아래로 쌓이고,
+   화면이 충분히 넓어지면(가로 모드/태블릿 등) 좌(접속코드+인원)/우(역할 구성)로 자동 전환된다. */
+.layout-row {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  max-width: 420px;
+}
+.col-left, .col-right {
+  width: 100%;
+}
+
+@media (min-width: 700px) {
+  .layout-row {
+    flex-direction: row;
+    align-items: flex-start;
+    max-width: 920px;
+    gap: 20px;
+  }
+  .col-left, .col-right {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+  .layout-row .card {
+    max-width: none;
+  }
+}
+
 .btn {
   display: inline-block;
   width: 100%;
@@ -71,7 +99,7 @@ label.toggle:last-child { border-bottom: none; }
   align-items: center;
   justify-content: center;
   gap: 16px;
-  margin: 8px 0 4px;
+  margin: 8px 0 12px;
 }
 
 .room-code {
@@ -84,13 +112,13 @@ label.toggle:last-child { border-bottom: none; }
 
 .qr-box {
   background: #fff;
-  border-radius: 10px;
-  padding: 6px;
+  border-radius: 8px;
+  padding: 4px;
   line-height: 0;
   flex-shrink: 0;
   cursor: pointer;
 }
-.qr-box img { display: block; width: 92px; height: 92px; }
+.qr-box img { display: block; width: 52px; height: 52px; }
 
 .qr-modal {
   position: fixed;
