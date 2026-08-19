@@ -49,6 +49,18 @@
     let code = null;
     let myBundle = null; // { role, image, related: {title, names, note} | null }
 
+    // QR로 접속한 경우 URL의 ?code=XXXX 값을 방 코드 입력칸에 미리 채워둔다.
+    (function prefillCodeFromUrl() {
+      try {
+        const params = new URLSearchParams(location.search);
+        const c = params.get('code');
+        if (c) {
+          document.getElementById('codeInput').value = c.toUpperCase();
+          document.getElementById('nameInput').focus();
+        }
+      } catch (e) {}
+    })();
+
     document.getElementById('joinBtn').onclick = () => {
       const name = document.getElementById('nameInput').value;
       const c = document.getElementById('codeInput').value;
