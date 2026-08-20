@@ -12,7 +12,7 @@
 
   <div class="card" id="joinCard">
     <label>이름
-      <input type="text" id="nameInput" placeholder="예: 승헌" maxlength="20" />
+      <input type="text" id="nameInput" placeholder="닉네임을 입력하세요" maxlength="20" />
     </label>
     <label style="margin-top:10px; display:block;">방 코드
       <input type="text" id="codeInput" placeholder="예: A1B2" maxlength="4" style="text-transform:uppercase;" />
@@ -24,6 +24,12 @@
   <div class="card" id="waitCard" style="display:none;">
     <p>진행자가 역할을 배정할 때까지 기다려 주세요.</p>
     <p class="note">화면을 옆으로 눕히거나 손으로 가려서 다른 사람이 못 보게 해주세요.</p>
+  </div>
+
+  <div class="card" id="pendingCard" style="display:none;">
+    <p>이미 진행 중인 게임이에요. 같은 닉네임으로 재접속을 요청했어요.</p>
+    <p class="note">진행자가 승인하면 원래 받았던 역할 그대로 이어서 볼 수 있어요. 잠시만 기다려 주세요.</p>
+    <div class="error-msg" id="pendingErr"></div>
   </div>
 
   <div class="card" id="roleCard" style="display:none;">
@@ -64,6 +70,7 @@
     document.getElementById('joinBtn').onclick = () => {
       const name = document.getElementById('nameInput').value;
       const c = document.getElementById('codeInput').value;
+      document.getElementById('joinErr').textContent = '';
       socket.emit('join_room', { code: c, name }, (res) => {
         if (!res.ok) {
           document.getElementById('joinErr').textContent = res.error || '입장 실패';
@@ -71,9 +78,21 @@
         }
         code = res.code;
         document.getElementById('joinCard').style.display = 'none';
-        document.getElementById('waitCard').style.display = 'block';
+        if (res.pending) {
+          // 이미 시작된 게임에 같은 닉네임으로 재접속을 요청한 상태 - 진행자 승인을 기다린다.
+          document.getElementById('pendingErr').textContent = '';
+          document.getElementById('pendingCard').style.display = 'block';
+        } else {
+          document.getElementById('waitCard').style.display = 'block';
+        }
       });
     };
+
+    socket.on('rejoin_denied', () => {
+      document.getElementById('pendingCard').style.display = 'none';
+      document.getElementById('joinCard').style.display = 'block';
+      document.getElementById('joinErr').textContent = '진행자가 재접속 요청을 거절했습니다.';
+    });
 
     socket.on('kicked', () => {
       alert('진행자가 당신을 방에서 내보냈습니다.');
@@ -140,6 +159,7 @@
       myBundle = bundle;
       preloadRoleImage(bundle);
       document.getElementById('waitCard').style.display = 'none';
+      document.getElementById('pendingCard').style.display = 'none';
       document.getElementById('roleCard').style.display = 'block';
       document.getElementById('roleBox').className = 'reveal-box hidden-state';
       document.getElementById('roleBox').innerHTML = '내 역할';

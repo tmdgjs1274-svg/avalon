@@ -31,6 +31,12 @@
         </div>
         <ul class="player-list" id="playerList"></ul>
       </div>
+
+      <div class="card" id="pendingRejoinsCard" style="display:none;">
+        <h2>재접속 승인 대기</h2>
+        <p class="note">배정 후 나갔던 참가자가 같은 닉네임으로 다시 들어오려고 해요. 승인하면 원래 역할 그대로 이어서 볼 수 있어요.</p>
+        <ul class="player-list" id="pendingRejoinsList"></ul>
+      </div>
     </div>
 
     <div class="col-right">
@@ -236,6 +242,41 @@
         document.getElementById('doneBadge').style.display = 'none';
         document.getElementById('assignErr').textContent = '';
       }
+    });
+
+    // 배정 후 나갔던 참가자가 같은 닉네임으로 재접속을 요청하면, 승인/거절 버튼과 함께 보여준다.
+    socket.on('pending_rejoins', (list) => {
+      const card = document.getElementById('pendingRejoinsCard');
+      const ul = document.getElementById('pendingRejoinsList');
+      card.style.display = list.length > 0 ? 'block' : 'none';
+      ul.innerHTML = '';
+      list.forEach((r) => {
+        const li = document.createElement('li');
+        const nameSpan = document.createElement('span');
+        nameSpan.textContent = r.name;
+        li.appendChild(nameSpan);
+
+        const actions = document.createElement('span');
+        actions.style.display = 'flex';
+        actions.style.gap = '8px';
+
+        const approveBtn = document.createElement('button');
+        approveBtn.textContent = '승인';
+        approveBtn.className = 'btn btn-primary';
+        approveBtn.style.cssText = 'width:auto; margin-top:0; padding:5px 12px; font-size:0.85rem;';
+        approveBtn.onclick = () => socket.emit('respond_rejoin', { code, requestId: r.requestId, approve: true }, () => {});
+
+        const denyBtn = document.createElement('button');
+        denyBtn.textContent = '거절';
+        denyBtn.className = 'btn btn-danger';
+        denyBtn.style.cssText = 'width:auto; margin-top:0; padding:5px 12px; font-size:0.85rem;';
+        denyBtn.onclick = () => socket.emit('respond_rejoin', { code, requestId: r.requestId, approve: false }, () => {});
+
+        actions.appendChild(approveBtn);
+        actions.appendChild(denyBtn);
+        li.appendChild(actions);
+        ul.appendChild(li);
+      });
     });
 
     socket.on('host_left', () => {});
